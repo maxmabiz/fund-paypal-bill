@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PayPal 收款账单管理 · 业务线账号弱提示原型</title>
+  <style>
+    :root {
+      --primary: #1677ff;
+      --primary-hover: #4096ff;
+      --text: rgba(0, 0, 0, .88);
+      --text-secondary: rgba(0, 0, 0, .45);
+      --text-tertiary: rgba(0, 0, 0, .25);
+      --border: #d9d9d9;
+      --bg: #f5f5f5;
+      --card: #fff;
+      --success: #52c41a;
+      --warning: #faad14;
+      --error: #ff4d4f;
+      --fill: #fafafa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      font-size: 14px;
+    }
+    .topbar {
+      height: 48px;
+      background: #001529;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 8px;
+    }
+    .topbar .logo { font-weight: 600; margin-right: 20px; white-space: nowrap; }
+    .topbar .nav {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      opacity: .65;
+      cursor: default;
+    }
+    .topbar .nav.active {
+      opacity: 1;
+      box-shadow: inset 0 -2px 0 var(--primary);
+    }
+    .topbar .user { margin-left: auto; opacity: .85; font-size: 13px; }
+    .page { padding: 16px 24px 40px; }
+    .breadcrumb { color: var(--text-secondary); font-size: 13px; margin-bottom: 8px; }
+    .breadcrumb b { color: var(--text); font-weight: 500; }
+    .page-title { font-size: 20px; font-weight: 600; margin: 0 0 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 12px 16px;
+      align-items: end;
+    }
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 11px;
+      outline: none;
+      background: #fff;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .field textarea { height: 88px; resize: none; padding: 8px 11px; }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, .12);
+    }
+    .date-range { display: flex; align-items: center; gap: 8px; }
+    .date-range span { color: var(--text-tertiary); }
+    .btn {
+      height: 32px;
+      padding: 0 15px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .btn:hover { color: var(--primary); border-color: var(--primary); }
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); color: #fff; }
+    .btn-primary:disabled { background: #91caff; border-color: #91caff; cursor: not-allowed; }
+    .btn-link {
+      border: none;
+      background: none;
+      color: var(--primary);
+      padding: 0;
+      height: auto;
+      cursor: pointer;
+    }
+    .btn-link:hover { color: var(--primary-hover); }
+    .table-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .muted { color: var(--text-secondary); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    th { color: var(--text-secondary); font-weight: 500; background: #fafafa; }
+    td.right { text-align: right; font-variant-numeric: tabular-nums; }
+    .tag {
+      display: inline-block;
+      line-height: 20px;
+      padding: 0 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      border: 1px solid transparent;
+    }
+    .tag-green { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
+    .tag-gray { color: rgba(0,0,0,.45); background: #fafafa; border-color: #d9d9d9; }
+    .tag-blue { color: #1677ff; background: #e6f4ff; border-color: #91caff; }
+    .tag-red { color: #cf1322; background: #fff1f0; border-color: #ffa39e; }
+    .link { color: var(--primary); text-decoration: none; }
+    .pager { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; color: var(--text-secondary); font-size: 13px; align-items: center; }
+
+    .mask {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: 20;
+      align-items: center;
+      justify-content: center;
+    }
+    .mask.show { display: flex; }
+    .modal {
+      width: 720px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
+    .step-meta { color: var(--text-secondary); font-size: 13px; font-weight: 400; margin-left: 8px; }
+    .modal-body { padding: 24px; min-height: 280px; }
+    .modal-footer {
+      padding: 12px 24px;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .close { border: none; background: none; font-size: 18px; cursor: pointer; color: var(--text-secondary); }
+
+    .step1-label {
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .step1-label .star { color: var(--error); margin-left: 2px; }
+    .biz-list { display: flex; flex-direction: column; gap: 12px; }
+    .biz-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-height: 56px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      background: #fff;
+      text-align: left;
+    }
+    .biz-row:hover { border-color: var(--primary); }
+    .biz-row.selected { border-color: var(--primary); background: #e6f4ff; }
+    .radio {
+      width: 16px;
+      height: 16px;
+      border: 1px solid #d9d9d9;
+      border-radius: 50%;
+      margin-right: 12px;
+      flex-shrink: 0;
+      position: relative;
+      background: #fff;
+    }
+    .biz-row.selected .radio { border-color: var(--primary); }
+    .biz-row.selected .radio::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+    .biz-row .name { font-size: 14px; font-weight: 400; }
+    .biz-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .biz-hint.mark { outline: 1px dashed #1677ff; outline-offset: 2px; }
+
+    .readonly {
+      height: 32px;
+      line-height: 30px;
+      padding: 0 11px;
+      background: var(--fill);
+      border: 1px solid #f0f0f0;
+      border-radius: 6px;
+      color: var(--text);
+    }
+    .account-hint {
+      margin-top: 4px;
+      padding: 8px 10px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .form-grid > .account-hint { margin-top: -4px; }
+    .account-hint.mark { outline: 1px dashed #1677ff; outline-offset: 2px; }
+    .account-hint .mail {
+      color: rgba(0, 0, 0, .65);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; align-items: start; }
+    .form-grid .span-2 { grid-column: span 2; }
+    .req::before { content: "*"; color: var(--error); margin-right: 4px; }
+    .counter { text-align: right; color: var(--text-tertiary); font-size: 12px; margin-top: 4px; }
+    .amount-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 32px;
+    }
+    .amount-row .amount-input {
+      width: 160px;
+      flex-shrink: 0;
+    }
+    .fee-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .fee-row .fee-label { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+    .toggle {
+      width: 44px;
+      height: 22px;
+      border: none;
+      border-radius: 100px;
+      background: rgba(0, 0, 0, .25);
+      position: relative;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, .2);
+      transition: left .2s;
+    }
+    .toggle.on { background: var(--primary); }
+    .toggle.on::after { left: 24px; }
+    .fee-detail {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #fafafa;
+      border: 1px solid #f0f0f0;
+      border-radius: 6px;
+      font-size: 12px;
+      color: rgba(0, 0, 0, .65);
+      line-height: 1.8;
+    }
+    .fee-detail .num {
+      color: #ff4d4f;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .fee-detail .rate {
+      color: var(--text-secondary);
+    }
+    .fee-detail.pending {
+      background: none;
+      border: none;
+      padding: 4px 0 0;
+      color: var(--text-secondary);
+    }
+    #feeDetail:empty { display: none; }
+    .fee-row.mark, .fee-detail.mark { outline: 1px dashed #1677ff; outline-offset: 2px; }
+    .toast {
+      display: none;
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.12);
+      z-index: 40;
+      font-size: 14px;
+    }
+    .toast.show { display: flex; align-items: center; gap: 8px; }
+    .dot-ok { width: 16px; height: 16px; border-radius: 50%; background: var(--success); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+
+    .proto-note {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      width: 320px;
+      background: #fff;
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      z-index: 15;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+    .proto-note b { color: var(--text); font-weight: 600; }
+    .proto-note code { font-size: 11px; background: #f5f5f5; padding: 1px 4px; border-radius: 4px; color: rgba(0,0,0,.65); }
+    .switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">资金中台管理系统</div>
+    <div class="nav active">收款管理</div>
+    <div class="nav">付款管理</div>
+    <div class="nav">账户管理</div>
+    <div class="nav">对账中心</div>
+    <div class="nav">风控管理</div>
+    <div class="user">张志远</div>
+  </div>
+
+  <div class="page">
+    <div class="breadcrumb">收款管理 / <b>PayPal 收款账单管理</b></div>
+    <h1 class="page-title">PayPal 收款账单管理</h1>
+
+    <div class="card">
+      <div class="filter-grid">
+        <div class="field">
+          <label>业务线</label>
+          <select><option>全部</option><option>广告</option><option>履约</option></select>
+        </div>
+        <div class="field">
+          <label>商户 ID</label>
+          <input placeholder="请输入商户 ID" />
+        </div>
+        <div class="field">
+          <label>接收邮箱</label>
+          <input placeholder="请输入接收邮箱" />
+        </div>
+        <div></div>
+        <div class="field">
+          <label>创建日期</label>
+          <div class="date-range">
+            <input type="date" />
+            <span>至</span>
+            <input type="date" />
+          </div>
+        </div>
+        <div class="field">
+          <label>账单状态</label>
+          <select>
+            <option>全部</option>
+            <option>未支付</option>
+            <option>已支付</option>
+            <option>已撤销</option>
+            <option>已退款</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="btn-row" style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn">重置</button>
+          <button class="btn btn-primary">查询</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-bar">
+        <span class="muted">共 5 条记录</span>
+        <button class="btn btn-primary" id="btnCreate">+ 创建 PayPal 账单</button>
+      </div>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>业务线</th>
+              <th>商户 ID</th>
+              <th>收款币种</th>
+              <th>收款金额</th>
+              <th>备注</th>
+              <th>接收邮箱</th>
+              <th>账单日期</th>
+              <th>创建时间</th>
+              <th>创建人</th>
+              <th>退款金额</th>
+              <th>账单号</th>
+              <th>收款链接</th>
+              <th>账单状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>广告</td><td>10003</td><td>EUR</td><td class="right">28,000.00</td>
+              <td>5月推广服务费</td><td>finance@sztech.com</td><td>2026-05-12</td>
+              <td>2026-05-12 10:21:03</td><td>王建国</td><td>-</td><td>48552</td>
+              <td><a class="link" href="#">https://www.pay...</a></td>
+              <td><span class="tag tag-green">已支付</span></td><td>-</td>
+            </tr>
+            <tr>
+              <td>履约</td><td>10004</td><td>GBP</td><td class="right">15,600.50</td>
+              <td>履约保证金补缴</td><td>ap@northway.io</td><td>2026-05-18</td>
+              <td>2026-05-18 14:08:41</td><td>刘晓明</td><td>-</td><td>48553</td>
+              <td><a class="link" href="#">https://www.pay...</a></td>
+              <td><span class="tag tag-gray">已撤销</span></td><td>-</td>
+            </tr>
+            <tr>
+              <td>广告</td><td>10008</td><td>USD</td><td class="right">9,800.00</td>
+              <td>Meta 投放预充</td><td>billing@adloop.com</td><td>2026-06-02</td>
+              <td>2026-06-02 09:12:18</td><td>王建国</td><td>-</td><td>48554</td>
+              <td><a class="link" href="#">https://www.pay...</a></td>
+              <td><span class="tag tag-blue">未支付</span></td>
+              <td><button class="btn-link">撤销</button></td>
+            </tr>
+            <tr>
+              <td>履约</td><td>10011</td><td>HKD</td><td class="right">48,000.00</td>
+              <td>仓储服务费</td><td>treasury@shglob.com</td><td>2026-06-06</td>
+              <td>2026-06-06 16:44:02</td><td>陈思远</td><td class="right">48,000.00</td><td>48555</td>
+              <td><a class="link" href="#">https://www.pay...</a></td>
+              <td><span class="tag tag-red">已退款</span></td><td>-</td>
+            </tr>
+            <tr>
+              <td>履约</td><td>10012</td><td>USD</td><td class="right">3,200.00</td>
+              <td>尾程运费</td><td>ap@northway.io</td><td>2026-06-08</td>
+              <td>2026-06-08 11:03:27</td><td>刘晓明</td><td>-</td><td>48556</td>
+              <td><a class="link" href="#">https://www.pay...</a></td>
+              <td><span class="tag tag-blue">未支付</span></td>
+              <td><button class="btn-link">撤销</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager">第 1-5 条，共 5 条</div>
+    </div>
+  </div>
+
+  <div class="mask" id="mask">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>创建 PayPal 账单 <span class="step-meta" id="stepMeta">步骤 1/3</span></h3>
+        <button class="close" id="btnClose">×</button>
+      </div>
+      <div class="modal-body" id="stepBody"></div>
+      <div class="modal-footer" id="stepFooter"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><span class="dot-ok">✓</span><span>PayPal 账单创建成功</span></div>
+
+  <aside class="proto-note">
+    <b>本次改动标注</b><br />
+    第一步：选中业务线后弱提示开具账号。<br />
+    第三步：默认关闭「客户承担手续费」。开启后，需已选币种并输入金额，才按银联汇率估算手续费；账单金额含手续费。<br />
+    Mock 费率 4.4% + 固定 2 CNY（按银联汇率折账单币种）。汇率日期 2026-09-09。
+    <label class="switch"><input type="checkbox" id="markToggle" checked /> 虚线标出新增提示</label>
+  </aside>
+
+  <script>
+    const ACCOUNTS = {
+      广告: "paypal.ads@bestfulfill.com",
+      履约: "paypal.fulfill@bestfulfill.com",
+    };
+    const MERCHANTS = {
+      "10001": "finance@sztech.com",
+      "10003": "finance@sztech.com",
+      "10004": "ap@northway.io",
+      "10008": "billing@adloop.com",
+      "10011": "treasury@shglob.com",
+      "10012": "ap@northway.io",
+    };
+    // 银联渠道汇率：1 外币 = x CNY，牌价日期 2026-09-09
+    const UNIONPAY_CNY = {
+      USD: 6.7259,
+      AUD: 4.86879996,
+      CAD: 4.89069995,
+      CHF: 8.31220026,
+      EUR: 7.83730016,
+      GBP: 9.12910027,
+      HKD: 0.8574,
+      SEK: 0.7038188,
+    };
+    const CCY_SYM = {
+      USD: "$", AUD: "A$", CAD: "C$", CHF: "CHF ",
+      EUR: "€", GBP: "£", HKD: "HK$", SEK: "kr",
+    };
+    const FEE_RATE = 0.044;
+    const FIXED_FEE_CNY = 2;
+
+    const state = {
+      step: 1,
+      biz: "",
+      merchantId: "",
+      email: "",
+      currency: "",
+      amount: "",
+      userBearFee: false,
+      billDate: new Date().toISOString().slice(0, 10),
+      remark: "",
+    };
+
+    let advanceTimer = null;
+
+    const markOn = () => document.getElementById("markToggle").checked;
+    const rowClass = (biz) =>
+      "biz-row" + (state.biz === biz ? " selected" : "");
+
+    function formatMoney(n) {
+      return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function calcFee(amount, ccy) {
+      const rate = UNIONPAY_CNY[ccy];
+      const n = Number(amount);
+      if (!rate || !Number.isFinite(n) || n <= 0) return null;
+      const fee = Math.round((n * FEE_RATE + FIXED_FEE_CNY / rate) * 100) / 100;
+      const total = Math.round((n + fee) * 100) / 100;
+      return { fee, total, rate };
+    }
+    function formatRate(n) {
+      return String(Number(n.toFixed(4)));
+    }
+    function feeDetailHTML() {
+      if (!state.userBearFee) return "";
+      const mark = markOn() ? " mark" : "";
+      const result = calcFee(state.amount, state.currency);
+      if (!result) {
+        return `<div class="fee-detail pending${mark}">请先选择币种并输入金额</div>`;
+      }
+      const sym = CCY_SYM[state.currency] || "";
+      return `<div class="fee-detail${mark}">
+        <div>预计收款金额约为：<span class="num">${sym}${formatMoney(result.total)}</span> ${state.currency}</div>
+        <div>手续费约为：<span class="num">${sym}${formatMoney(result.fee)}</span> ${state.currency}</div>
+        <div class="rate">银联汇率 1 ${state.currency} = ${formatRate(result.rate)} CNY（2026-09-09），账单金额含手续费</div>
+      </div>`;
+    }
+    function refreshFeePreview() {
+      const detail = document.getElementById("feeDetail");
+      if (detail) detail.innerHTML = feeDetailHTML();
+    }
+
+    function render() {
+      document.getElementById("stepMeta").textContent = `步骤 ${state.step}/3`;
+      const body = document.getElementById("stepBody");
+      const footer = document.getElementById("stepFooter");
+
+      if (state.step === 1) {
+        const hint = state.biz
+          ? `<div class="biz-hint${markOn() ? " mark" : ""}">将使用 PayPal 账号 ${ACCOUNTS[state.biz]} 开具账单</div>`
+          : "";
+        body.innerHTML = `
+          <div class="step1-label">请选择业务线 <span class="star">*</span></div>
+          <div class="biz-list">
+            <button class="${rowClass("广告")}" data-biz="广告">
+              <span class="radio"></span>
+              <span class="name">广告</span>
+            </button>
+            <button class="${rowClass("履约")}" data-biz="履约">
+              <span class="radio"></span>
+              <span class="name">履约</span>
+            </button>
+          </div>
+          ${hint}
+        `;
+        footer.innerHTML = `<button class="btn" data-act="cancel">取消</button>`;
+      }
+
+      if (state.step === 2) {
+        body.innerHTML = `
+          <div class="form-grid">
+            <div class="field">
+              <label>业务线</label>
+              <div class="readonly">${state.biz}</div>
+            </div>
+            <div class="field">
+              <label class="req">商户 ID</label>
+              <input id="merchantId" placeholder="请输入商户 ID" value="${state.merchantId}" />
+            </div>
+          </div>
+        `;
+        footer.innerHTML = `
+          <button class="btn" data-act="cancel">取消</button>
+          <button class="btn" data-act="back">上一步</button>
+          <button class="btn btn-primary" data-act="next" ${state.merchantId ? "" : "disabled"}>下一步</button>
+        `;
+      }
+
+      if (state.step === 3) {
+        body.innerHTML = `
+          <div class="form-grid">
+            <div class="field">
+              <label>业务线</label>
+              <div class="readonly">${state.biz}</div>
+            </div>
+            <div class="field">
+              <label>商户 ID</label>
+              <div class="readonly">${state.merchantId}</div>
+            </div>
+            <div class="field span-2">
+              <label>账单接收邮箱</label>
+              <input id="recvEmail" placeholder="选择商户后自动带出，可修改" value="${state.email}" />
+            </div>
+            <div class="field">
+              <label class="req">收款币种</label>
+              <select id="currency">
+                <option value="">请选择</option>
+                ${["USD","AUD","CAD","CHF","EUR","GBP","HKD","SEK"].map(c =>
+                  `<option ${state.currency===c?"selected":""}>${c}</option>`).join("")}
+              </select>
+            </div>
+            <div class="field">
+              <label class="req">账单日期</label>
+              <input id="billDate" type="date" value="${state.billDate}" />
+            </div>
+            <div class="field span-2">
+              <label class="req">收款金额</label>
+              <div class="amount-row">
+                <input id="amount" class="amount-input" placeholder="请输入金额" value="${state.amount}" />
+                <div class="fee-row${markOn() ? " mark" : ""}">
+                  <span class="fee-label">客户承担手续费</span>
+                  <button type="button" class="toggle${state.userBearFee ? " on" : ""}" data-act="feeToggle" aria-pressed="${state.userBearFee}"></button>
+                </div>
+              </div>
+              <div id="feeDetail">${feeDetailHTML()}</div>
+            </div>
+            <div class="field span-2">
+              <label>备注</label>
+              <textarea id="remark" maxlength="50" placeholder="请输入备注（最多50字）">${state.remark}</textarea>
+              <div class="counter">${(state.remark||"").length}/50</div>
+            </div>
+          </div>
+        `;
+        footer.innerHTML = `
+          <button class="btn" data-act="cancel">取消</button>
+          <button class="btn" data-act="back">上一步</button>
+          <button class="btn btn-primary" data-act="submit">确定</button>
+        `;
+      }
+    }
+
+    function openModal() {
+      Object.assign(state, {
+        step: 1, biz: "", merchantId: "", email: "", currency: "", amount: "",
+        userBearFee: false,
+        billDate: new Date().toISOString().slice(0, 10), remark: "",
+      });
+      document.getElementById("mask").classList.add("show");
+      render();
+    }
+    function closeModal() {
+      if (advanceTimer) {
+        clearTimeout(advanceTimer);
+        advanceTimer = null;
+      }
+      document.getElementById("mask").classList.remove("show");
+    }
+
+    document.getElementById("btnCreate").onclick = openModal;
+    document.getElementById("btnClose").onclick = closeModal;
+    document.getElementById("markToggle").onchange = () => {
+      if (document.getElementById("mask").classList.contains("show")) render();
+    };
+
+    document.getElementById("mask").addEventListener("click", (e) => {
+      if (e.target.id === "mask") closeModal();
+      const biz = e.target.closest("[data-biz]");
+      if (biz) {
+        state.biz = biz.dataset.biz;
+        render();
+        if (advanceTimer) clearTimeout(advanceTimer);
+        advanceTimer = setTimeout(() => {
+          advanceTimer = null;
+          state.step = 2;
+          render();
+        }, 900);
+      }
+      const act = e.target.closest("[data-act]");
+      if (!act) return;
+      const name = act.dataset.act;
+      if (name === "cancel") closeModal();
+      if (name === "back") { state.step -= 1; render(); }
+      if (name === "feeToggle") {
+        state.userBearFee = !state.userBearFee;
+        render();
+      }
+      if (name === "next" && state.merchantId) {
+        state.email = MERCHANTS[state.merchantId] || state.email;
+        state.step = 3;
+        render();
+      }
+      if (name === "submit") {
+        if (!state.currency || !state.amount || !state.billDate) {
+          alert("请完整填写必填项");
+          return;
+        }
+        closeModal();
+        const toast = document.getElementById("toast");
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 2200);
+      }
+    });
+
+    document.getElementById("mask").addEventListener("input", (e) => {
+      if (e.target.id === "merchantId") {
+        state.merchantId = e.target.value.trim();
+        const next = document.querySelector('[data-act="next"]');
+        if (next) next.disabled = !state.merchantId;
+      }
+      if (e.target.id === "recvEmail") state.email = e.target.value;
+      if (e.target.id === "currency") {
+        state.currency = e.target.value;
+        refreshFeePreview();
+      }
+      if (e.target.id === "amount") {
+        state.amount = e.target.value;
+        refreshFeePreview();
+      }
+      if (e.target.id === "billDate") state.billDate = e.target.value;
+      if (e.target.id === "remark") {
+        state.remark = e.target.value.slice(0, 50);
+        const counter = document.querySelector(".counter");
+        if (counter) counter.textContent = `${state.remark.length}/50`;
+      }
+    });
+    document.getElementById("mask").addEventListener("change", (e) => {
+      if (e.target.id === "currency") {
+        state.currency = e.target.value;
+        refreshFeePreview();
+      }
+    });
+  </script>
+</body>
+</html>
